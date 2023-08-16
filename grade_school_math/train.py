@@ -1,20 +1,22 @@
 import torch as th
+from datasets import load_dataset
+
 from dataset import get_examples, GSMDataset
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
-from transformers import GPT2Config, AdamW
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import T5Config, AdamW
 from transformers import get_scheduler
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 
 
 def main():
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    train_examples = get_examples("train")
+    tokenizer = T5Tokenizer.from_pretrained("t5-small", legacy=False)
+    train_examples = load_dataset("gsm8k", "main")["train"]
     train_dset = GSMDataset(tokenizer, train_examples)
 
     device = th.device("cuda")
-    config = GPT2Config.from_pretrained("gpt2")
-    model = GPT2LMHeadModel.from_pretrained("gpt2", config=config)
+    config = T5Config.from_pretrained("t5-small")
+    model = T5ForConditionalGeneration.from_pretrained("t5-small", config=config)
     model.to(device)
     model.train()
 
@@ -35,7 +37,7 @@ def main():
         for batch in train_loader:
             optim.zero_grad()
             batch = {k: v.to(device) for k, v in batch.items()}
-            outputs = model(**batch, labels=batch["input_ids"])
+            outputs = model(**batch)
             loss = outputs[0]
             loss.backward()
             optim.step()
